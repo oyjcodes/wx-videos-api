@@ -7,7 +7,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	
-	<name>番茄小视频</name>
+	<name>番茄短视频微信端后台API</name>
 	<description>
 		maven
 		springmvc

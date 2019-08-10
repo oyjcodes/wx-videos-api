@@ -5,6 +5,10 @@
     <artifactId>wx-videos-dev</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
+
+    <!--打成war包-->
+    <packaging>war</packaging>
+
   <artifactId>wx-videos-dev-mini-api</artifactId>
   <dependencies>
   	<dependency>
@@ -12,5 +16,11 @@
   		<artifactId>wx-videos-dev-service</artifactId>
   		<version>0.0.1-SNAPSHOT</version>
   	</dependency>
+
+      <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <scope>provided</scope>
+      </dependency>
   </dependencies>
 </project>
