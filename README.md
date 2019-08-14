@@ -29,7 +29,7 @@
 
 
 <h2>💻后台管理系统页面展现</h2>
-<img src="./img/back.png"
+<img src="./img/back.png">
 
  
 
@@ -112,12 +112,153 @@ Requests per second:    635.21 [#/sec] (mean)
 ```
 
 <p>架构升级：使用Redis缓存以及主从架构之后，测试的结果如下：平均每秒的请求数提高到了4678.72，大大提高了网站的吞吐量。</p>
+
 ```
 Time taken for tests:   1.033 seconds
 Total transferred:      2696313 bytes
 HTML transferred:       1559682 bytes
 Requests per second:    4678.72 [#/sec] (mean)
+
 ```
+<h2>分布式一致性</h2>
+
+<h3>集中式</h3>
+
+部署结构简单（因为基于底层性能卓越的大型主机，不需考虑对服务多个节点的部署，也就不用考虑多个节点之间分布式协调问题）
+
+<h3>分布式的特点</h3>
+
+分布式系统是一个硬件或软件组件分布在不同的网络计算机上，彼此之间仅仅通过消息传递进行通信和协调的系统。
+分布性：在空间随意分布
+对等性：没有主从之分，都是对等的
+并发性
+缺乏全局时钟：很难定义两个事件谁先谁后
+故障总是会发生
+ 
+
+<h3>分布式环境的各种问题</h3>
+
+通信异常：主要是因为网络本身的不可靠性
+网络分区：当网络发生异常时，导致部分节点之间的网络延时不断增大，最终导致部分节点可以通信，而另一部分节点不能。
+三态（成功、失败与超时）
+节点故障：组成分布式系统的服务器节点出现宕机或“僵死”现象
+ 
+<h3>Paxos算法</h3>
+
+算法中的参与者主要分为三个角色，同时每个参与者又可兼领多个角色:
+
+　　proposer 提出提案，提案信息包括提案编号和提议的value;
+
+　　acceptor 收到提案后可以接受(accept)提案;
+
+　　learner 只能"学习"被批准的提案;
+
+阶段一：
+
+　　Proposer选择一个提案编号Mn，向Acceptor的某个超过半数的子集成员发送编号为Mn的Prepare请求
+
+　　如果一个Acceptor收到一个Mn的请求，且Mn大于它已经响应的所有请求的编号，它会将它已批准过的最大编号的提案作为响应反馈给Proposer，同时它承诺不会再批准任何编号小于Mn的提案
+
+　　比如一个Acceptor已经响应过的提案编号分别为1,2,7，那么它在收到一个编号为8的Prepare请求后，会将编号为7的提案反馈给Proposer
+
+阶段二 ：
+
+　　如果Proposer收到半数以上的Acceptor的响应，它会发一个针对[Mn，Vn]提案的Accept请求给Acceptor。Vn是收到响应中编号最大提案的值，如果响应中不包含任何提案，那么它就是任意值
+
+　　如果Acceptor收到这个针对[Mn，Vn]提案的Accept请求，只要它尚未对编号大于Mn的Prepare请求做出响应，它就可以通过这个提案
+
+提案获取：
+
+　　方案一：一旦 Acceptor批准了一个提案，就发送给所有Learner
+
+　　方案二：批准的提案先发给主Learner，再由其同步给其他Learner。（主Learner可能出现故障）
+
+　　方案三：批准的提案先发给一个特定的Learner集合，再由集合里的Learner通知其他Learner。
+
+
+<h2>ZooKeeper与Paxos</h2>
+
+<h3>ZooKeeper的ZAB协议</h3>
+
+　　ZooKeeper并没有完全采用Paxos算法，而是采用一种称为ZooKeeper Atomic Broadcast(ZAB 原子消息广播协议)作为其数据一致性的核心算法。
+
+　　ZAB是一种支持崩溃恢复的原子广播协议。
+
+　　ZooKeeper使用一个单一主进程来处理所有事物请求，并采用ZAB，将服务器数据的状态变更广播到所有副本进程上。
+
+<h3>协议介绍</h3>
+
+　　ZAB包括两种基本模式，分别是崩溃恢复和消息广播。
+
+　　当Leader服务器出现网络中断或者崩溃，ZAB协议会进入恢复模式并选举新的Leader。
+
+　　当集群中过半的Follower完成了Leader的状态同步，整个服务框架就可以进入消息广播模式了。
+
+　　如果非Leader节点收到客户端的事务请求，会转发给Leader。
+
+ 
+
+<h4>消息广播</h4>
+
+　　在ZAB的二阶段提交过程中，移除了中断逻辑，意味着可以在过半节点反馈ACK之后提交事务。
+
+　　需要崩溃恢复模式来解决Leader崩溃带来的数据不一致问题。
+
+　　在消息广播的过程中，Leader会为每一个事务Proposal分配一个全局递增唯一的ID。
+
+　　每一个Follower在接收到这个事务的Proposal之后，会将其以事务日志的形式写入到磁盘中去，并向Leader反馈ACK。
+
+　　当Leader收到半数节点的ACK时，会广播一个commit消息通知其他节点进行事务提交，同时自己也完成事务提交。
+
+ 
+
+<h4>崩溃恢复</h4>
+
+　　Leader选举算法应该保证：已经在Leader上提交的事务最终也被其他节点都提交，即使出现了Leader挂掉，Commit消息没发出去这种情况。
+
+　　　　确保丢弃只在Leader上被提出的事务。Leader提出一个事务后挂了，集群中别的节点都没收到，当挂掉的节点恢复后，要确保丢弃那个事务。
+
+　　让Leader选举算法能够保证新选举出来的Leader拥有最大的事务ID的Proposal。
+
+ 
+
+<h4>数据同步</h4>
+
+　　在完成Leader选举后，Leader会首先确认事务日志中所有Proposal是否都被集群中过半的节点提交了，即是否完成数据同步。
+
+ 
+
+<h4>事务ID</h4>
+
+　　是一个64位数，低32位是一个单调递增的计数器，每一个新的Proposal产生，该计数器都会+1.
+
+　　高32位代表Leader周期epoch编号，每当选举出新Leader，会取得这个Leader的最大事务ID，对其高32位+1.低32位清零。
+
+　　ZAB通过epoch来区分Leader周期变化的策略，简化和提升了数据恢复的流程。
+
+ 
+
+　　Leader和Follower通过心跳检测来感知彼此的情况。
+
+　　如果Leader在指定时间内无法从过半的Follower那收到心跳检测，或者是/TCP连接本身断开了，会重新选举Leader。
+
+　　心跳是从follower向leader发送心跳。
+
+　　ZAB主要用于构建一个高可用的分布式数据主备系统。
+
+　　Paxos算法是用于构建一个分布式的一致性状态机系统。
+
+
+<h2>Zookeeper在项目中的应用</h2>
+
+![](./img/zookeeper.png)
+
+1.	Zookeeper客户端随着tomcat的启动而自动连接zookeeper服务器，创建会话；
+
+2.	小程序管理后台添加或删除背景音乐（bgm）,会向zookeeper节点写入操作的信息,因为bgm的信息很多，因此我们将bgm的主键作为zookeeper的字节点，存入的信息是{operType："***"，path："***"} operType=1表示音乐的添加,operType=2 表示音乐的删除，path表示背景音乐的存储路径；
+
+3.	小程序API服务监听 admin/bgm 节点，依据获取的信息:{operType："***"，path："***"}，如果operType=1表示有新的音乐节点存入，则自动下载到本地(小程序API部署服务器)，如果operType=2表示有旧的音乐节点删除，就将本地对应path的bgm删除。
+
 
 <h2>缓存选择</h2>
 
@@ -155,15 +296,18 @@ NoEviction 和 TTL（Time to Live）不适合本项目的缓存系统，因为�
 | allkeys-random  |          从所有数据集中任意选择数据进行淘汰          |
 |   noeviction    |                     禁止驱逐数据                     |
 
+
 LRU 除了在 Redis 中被当做缓存淘汰策略，它在很多场合都被使用，例如操作系统的页面置换算法可以使用 LRU，这是因为页面置换算法也相当于一个缓存淘汰算法。Java 里面的 LinkedHashMap 可以保存插入键值对的 LRU，在 Java 程序中就可以使用 LinkedHashMap 来实现类似的缓存淘汰功能。
 
 实现 LRU 其实也很简单，就是通过一个链表来维护顺序，在访问一个元素时，就将元素移到链表头部，那么链表尾部的元素就是最近最少使用的元素，可以将它淘汰。
+
 <h3>LRU缓存<h3>
 以下是使用 LinkedHashMap 实现的一个 LRU 缓存：
 
 设定最大缓存空间 MAX_ENTRIES 为 3；
 使用 LinkedHashMap 的构造函数将 accessOrder 设置为 true，开启 LRU 顺序；
 覆盖 removeEldestEntry() 方法实现，在节点多于 MAX_ENTRIES 就会将最近最久未使用的数据移除。
+
 
 ```java
 class LRUCache<K, V> extends LinkedHashMap<K, V> {
@@ -234,7 +378,7 @@ public void adVideo(int userId, Video video)
 
 <h3>主从复制</h3>
 
-![](.img/5.png)
+![](./img/5.png)
 
 MySQL 主从复制主要涉及三个线程：binlog 线程、I/O 线程和 SQL 线程。
 
