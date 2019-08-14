@@ -508,35 +508,28 @@ mysql > show slave status\G;
 
 ```
 Page({
-  data: {
-  },
-
-  onLoad: function () {
-
-    // 2 搜索栏初始化
+    onLoad: function () {
+    //搜索栏初始化
     var that = this;
-
-    // 查询热搜词
+    //查询热搜词
     var serverUrl = app.serverUrl;
     wx.request({
-      url: serverUrl + '/video/hot',
-      method: "POST",
-      success: function(res) {
+        url: serverUrl + '/video/hot',
+        method: "POST",
+        success: function(res) {
         console.log(res);
         var hotList = res.data.data;
-
         WxSearch.init(
-          that,  // 本页面一个引用
-          hotList,
-          //["java", "小程序", 'zookeeper', 'springboot']
-          hotList,// 热点搜索推荐，[]表示不使用
-          that.mySearchFunction, // 提供一个搜索回调函数
-          that.myGobackFunction //提供一个返回回调函数
+            that,  // 本页面一个引用
+            hotList,
+            //["java", "小程序", 'zookeeper', 'springboot']
+            hotList,// 热点搜索推荐，[]表示不使用
+            that.mySearchFunction, // 提供一个搜索回调函数
+            that.myGobackFunction //提供一个返回回调函数
         );
-      }
+        }
     })
-
-  },
+},
 ```
 为了方便调用，提高开发效率，组件实际上只是提供了两个回调接口，开发者只需要提供这两个函数：
 ```
@@ -699,14 +692,15 @@ Page({
 
 
 <h2>🔥写在最后的话</h2>
-✌✌✌✌✌✌✌学习的过程是"痛并快乐着",比如小程序的审核过程，无奈一个学习🐶没有企业资质，无法申请企业主体小程序；
+😀😀😀😀学习的过程是"痛并快乐着",比如小程序的审核过程，无奈一个学习🐶没有企业资质，无法申请企业主体小程序；
 从代码开发、linux腾讯云服务器部署、到微信小程序必须要使用SSL证书配置https协议，到默默等待网站备案审核，到现在最后一步微信小程序的上传部署，
-看样子我只有砍掉“用户自行生成内容（文字、图片、音/视频）的记录、分享等功能，只剩下一个光秃秃的视频浏览才能通过审核，哈哈哈哈，虽然没有上线成功，但是这一路走来的确学到了哼多知识的呢👍👍加油” ~~~~~✌✌✌✌✌✌✌✌✌✌
+看样子我只有砍掉“用户自行生成内容（文字、图片、音/视频）的记录、分享等功能，只剩下一个光秃秃的视频浏览才能通过审核，哈哈哈哈，虽然没有上线成功，但是这一路走来的确学到了哼多知识的呢👍👍加油骚年” ~~~~~✌✌✌✌✌✌✌✌✌✌
 
 ![](./img/error.png)
 
 
 ![](./img/error1.png)
+
 
 ![](./img/beian.png)
 
