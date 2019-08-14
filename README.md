@@ -1,6 +1,6 @@
 <img src="./img/bTitle.png">
 
-⭐⭐⭐⭐番茄短视频-后台管理系统🙋基于SpringBoot搭建🐓 关键字：SSM、springboot、分布式、前后端分离、云部署、Zookeeper、redis
+⭐⭐⭐⭐番茄短视频-后台管理系统🙋基于SpringBoot搭建🐓 关键字：SSM、springboot、分布式、前后端分离、云部署、Zookeeper、redis(更新中......)
 #
 <h2>☁️线上版(备案中......)</h2>
 <img src="./img/wx.jpg">
@@ -253,9 +253,10 @@ Requests per second:    4678.72 [#/sec] (mean)
 
 ![](./img/zookeeper.png)
 
+
 1.	Zookeeper客户端随着tomcat的启动而自动连接zookeeper服务器，创建会话；
 
-2.	小程序管理后台添加或删除背景音乐（bgm）,会向zookeeper节点写入操作的信息,因为bgm的信息很多，因此我们将bgm的主键作为zookeeper的字节点，存入的信息是{operType："***"，path："***"} operType=1表示音乐的添加,operType=2 表示音乐的删除，path表示背景音乐的存储路径；
+2.	小程序管理后台添加或删除背景音乐（bgm）,会向zookeeper节点写入操作的信息,因为bgm的信息很多，因此我们将bgm的主键作为zookeeper的子节点，存入的信息是{operType："***"，path："***"} operType=1表示音乐的添加,operType=2 表示音乐的删除，path表示背景音乐的存储路径；
 
 3.	小程序API服务监听 admin/bgm 节点，依据获取的信息:{operType："***"，path："***"}，如果operType=1表示有新的音乐节点存入，则自动下载到本地(小程序API部署服务器)，如果operType=2表示有旧的音乐节点删除，就将本地对应path的bgm删除。
 
@@ -501,6 +502,63 @@ mysql > show slave status\G;
             ...
 ```
 
+<h2>微信端搜索的交互设计</h2>
+基于开源的 wsSearchView 微信小程序搜索框组件：使用简单、文档注释详细、简洁美观，简化短视频搜索
+
+```
+Page({
+  data: {
+  },
+
+  onLoad: function () {
+
+    // 2 搜索栏初始化
+    var that = this;
+
+    // 查询热搜词
+    var serverUrl = app.serverUrl;
+    wx.request({
+      url: serverUrl + '/video/hot',
+      method: "POST",
+      success: function(res) {
+        console.log(res);
+        var hotList = res.data.data;
+
+        WxSearch.init(
+          that,  // 本页面一个引用
+          hotList,
+          //["java", "小程序", 'zookeeper', 'springboot']
+          hotList,// 热点搜索推荐，[]表示不使用
+          that.mySearchFunction, // 提供一个搜索回调函数
+          that.myGobackFunction //提供一个返回回调函数
+        );
+      }
+    })
+
+  },
+```
+为了方便调用，提高开发效率，组件实际上只是提供了两个回调接口，开发者只需要提供这两个函数：
+```
+搜索回调函数，当用户点击"搜索记录"(当前用户的搜索记录)、"搜索热点"(所有的用户搜索的热点结果)，都会回调开发者提供的函数接口，开发者拿到参数后可以跳到另一个页面展示查询结果。 
+  mySearchFunction: function (value) {
+    // 示例：跳转
+    wx.redirectTo({
+      url: '../index/index?isSaveRecord=1&search=' + values
+    })
+  },
+
+返回回调函数，搜索框边上的按钮有两个角色，当输入为空的时候，是一个返回按钮；当输入不为空时，是一个搜索按钮。当点击返回按钮时，就会回调开发者提供的函数，这里可以跳回到指定页面。
+  myGobackFunction: function () {
+    // 示例：返回
+    wx.redirectTo({
+      url: '../index/index'
+    })
+  }
+```
+![](./img/search.png)
+
+
+
 
 <h2>🔎技术栈</h2>
 <table>
@@ -572,6 +630,12 @@ mysql > show slave status\G;
 <td><a href="http://ffmpeg.org/" rel="nofollow">http://ffmpeg.org/</a></td>
 </tr>
 
+
+<tr>
+<td>wsSearchView</td>
+<td>小程序搜索框组件</td>
+<td><a href="https://github.com/oyjcodes/wsSearchView" rel="nofollow">https://github.com/oyjcodes/wsSearchView</a></td>
+</tr>
 
 <tr>
 <td>PageHelper</td>
