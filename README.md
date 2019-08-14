@@ -22,41 +22,28 @@
 <h2>💡小程序端展示</h2>
 
 <img src="./video/show.gif">
+<img src="./img/view/user.png"><br>
+<img src="./img/view/1.jpg">
+
+
+
 
 <h2>💻后台管理系统页面展现</h2>
-<img src="./img/back.png">
+<img src="./img/back.png"
 
-
-
-<h2>🔧相关技术</h2>
- <p>前端:h5+css+javascript+jquery+bootstrap+themeleaf</p>
- <p>后端:springboot+mybatis+mysql</p>
- <p>组件:bootsrap-table,webUploader,pagehelper+layer</p>
- <p>项目部署: docker + linux</p>
- <p>中间件:zookeeper(分布式)</p>
- <P>测试:swagger2,postman</p>
- <p>开发风格：分布式系统架构，前后端分离开发风格，RESTful api</p>
-
-
- <h2>📝需求分析</h2>
- <p>用户需求</p> 
- <p>用户个人信息管理，视频的编辑（加入滤镜或者背景音乐）、上传、浏览、点赞、关注、下载、等功能。</p>
- <p>管理员需求</p>
- <p>用户管理、视频管理（对违违法视频进行审核操作）、背景音乐管理（对音乐库中音乐的增删改查、通过zookeper与小程序前台进行交互）等</p> 
  
 
   
-<h2>✏️项目设计</h2>
+<h2>✏️项目需求及设计</h2>
 <h3>微信小程序端</h3>
-<p>前台的设计、后台的管理、安全性</p>
-<p>前端：基于微信小程序的开发文档</p>
-<p>后端：基于springboot   +   mysql数据库  +  redis缓存数据库  +  ffmpeg + zookeeper</p>
+<p>APP前端：基于微信小程序的开发文档</p>
+<p>API后端：基于SSM  +  ProxySQL  +  mysql数据库  +  redis缓存数据库  +  ffmpeg音视频工具 + zookeeper分布式一致性服务</p>
 <p>组件：wxsearch微信小程序搜索组件</p>
+<p>功能：实现了视频上传(手机视频拍摄、选取本地视频)、浏览、热点关键词检索、点赞、评论、关注、举报、下载、分享、转发（接口未开放）等功能。</p>
 
 <h3>后台管理系统端</h3>
-<p>后台管理系统的开发、安全性</p>
-<p>mybatis 数据持久层框架</p>
 <p>网站前端：bootstrap前端框架 + javascript + css +html +jquery +ajax+themeleaf模板引擎 </p>
+<p>网站后端：SpringBoot快速开发框架 + mysql数据库 +  zookeeper分布式一致性服务</p>
 <p>短视频：审核、删除</p>
 <p>背景音乐：添加和修改</p>
 <p>管理员管理：用户管理、视频访问量、点击率的记载分析(开发中......)</p>
@@ -73,12 +60,305 @@
 <p>关于后台管理系统 导入wx-videos-admin项目</p>
 <p>关于分布式zookeeper环境配置，观看相关的配置文件即可</p>
 
+
+<h2>运行环境</h2>
+<p>本系统运行在三台云服务器上，实现分布式部署。<p>
+<table>
+<thead>
+<tr>
+<th>服务器名</th>
+<th>部署</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>Server1</td>
+<td>微信小程序后台API(SSM搭建)</td>
+</tr>
+<tr>
+<td>Server2</td>
+<td>Zookeeper</td>
+</tr>
+
+<tr>
+<td>Server3</td>
+<td>短视频后台管理(springBoot)搭建</td>
+</tr>
+</tbody>
+</table>
  
- 
- <h2>🔎技术栈</h2>
- <h3>JAVA后端</h3>
+<h2>性能测试</h2>
+
+<p>使用 Apache的ab(apachebench)工具来进行压力测试</p>
+
+ab命令会创建多个并发访问线程，模拟多个访问者同时对某一URL地址进行访问。
+
+ab命令对发出负载的计算机要求很低，它既不会占用很高CPU，也不会占用很多内存。但却会给目标服务器造成巨大的负载，其原理类似CC攻击。
+
+为了防止网络时延的影响，因此在服务器端运行 ab 工具进行测试。其中 -c 参数为并发数，-n 参数为请求数，-k 参数表示持久连接，http://127.0.0.1/v就是待测试的网站。
+
+```
+ab -c 1000 -n 6000 -k http://127.0.0.1/v
+```
+
+<p>原始架构：没有采用Redis缓存以及主从架构来实现读写分离，测试的部分结果如下：平均每秒的请求数为 635.21。</p>
+
+```
+Time taken for tests:   6.985 seconds
+Total transferred:      2645529 bytes
+HTML transferred:       1530306 bytes
+Requests per second:    635.21 [#/sec] (mean)
+```
+
+<p>架构升级：使用Redis缓存以及主从架构之后，测试的结果如下：平均每秒的请求数提高到了4678.72，大大提高了网站的吞吐量。</p>
+```
+Time taken for tests:   1.033 seconds
+Total transferred:      2696313 bytes
+HTML transferred:       1559682 bytes
+Requests per second:    4678.72 [#/sec] (mean)
+```
+
+<h2>缓存选择</h2>
+
+在项目开始的时候面临着 Redis 和 Memcache 的选择问题，对比两者的区别如下：
+
+1. Redis 有更好的分布式支持，而 Memcache 只能在客户端使用一致性 Hash 来支持分布式。
+
+2. Redis 具有 RDB 快照和 AOF 日志两种持久化特性，而 Memcache 没有持久化机制。
+
+3. Redis 的 Value 支持五种类型，而 Memcache 的 Value 只能是 String。
+
+4. Redis 会将很久没用的 KV 交换到磁盘上，而 Memchache 的数据一直在内存中。
+
+5. Memcache 为了完全去除磁盘碎片的影响，将内存分割成特定长度的块来存储数据，但是这种方式导致了内存利用率不高。例如块的大小为 128 bytes，只存储 100 bytes 的数据，那么剩下的 28 bytes 就浪费掉了。
+
+6. 考虑到项目后期可能需要使用多台缓存服务器进行扩展，因此首选 Redis。
+
+7. 需要明确的是虽然 Spring 整合了 Redis，使用 @Cacheable 等注解就可以使用 Redis 进行缓存，但是为了让缓存更可控，使缓存操作更加的灵活，因此选择自己实现缓存功能。
+
+<h2>Redis 配置</h2>
+首先需要对 Redis 进行配置，主要是两个方面：内存最大使用量以及缓存淘汰策略。
+
+内存最大使用量在服务器能接受的范围内越大越好，一般要比热点数据大一些，因为 Reids 不仅要用来存储数据，还有存 Redis 运行过程的数据。
+
+Redis 有五种缓存淘汰策略，为了选择一种适合项目的策略，需要先对每种策略进行一个了解。
+
+NoEviction 和 TTL（Time to Live）不适合本项目的缓存系统，因为不淘汰和根据过期时间进行淘汰都不能保证留在缓存中的数据都尽可能是热点数据。Random 也和过期时间相关，并且随机化策略无法保证热点数据。LRU（least recently used） 策略将最近最少使用的数据进行淘汰，最近使用次数多的数据被认为是热点数据，因此将最近最少使用的数据淘汰之后，能在很大程度上保证在缓存中的数据都是热点数据。
+
+|      策略       |                         描述                         |
+| :-------------: | :--------------------------------------------------: |
+|  volatile-lru   | 从已设置过期时间的数据集中挑选最近最少使用的数据淘汰 |
+|  volatile-ttl   |   从已设置过期时间的数据集中挑选将要过期的数据淘汰   |
+| volatile-random |      从已设置过期时间的数据集中任意选择数据淘汰      |
+|   allkeys-lru   |       从所有数据集中挑选最近最少使用的数据淘汰       |
+| allkeys-random  |          从所有数据集中任意选择数据进行淘汰          |
+|   noeviction    |                     禁止驱逐数据                     |
+
+LRU 除了在 Redis 中被当做缓存淘汰策略，它在很多场合都被使用，例如操作系统的页面置换算法可以使用 LRU，这是因为页面置换算法也相当于一个缓存淘汰算法。Java 里面的 LinkedHashMap 可以保存插入键值对的 LRU，在 Java 程序中就可以使用 LinkedHashMap 来实现类似的缓存淘汰功能。
+
+实现 LRU 其实也很简单，就是通过一个链表来维护顺序，在访问一个元素时，就将元素移到链表头部，那么链表尾部的元素就是最近最少使用的元素，可以将它淘汰。
+<h3>LRU缓存<h3>
+以下是使用 LinkedHashMap 实现的一个 LRU 缓存：
+
+设定最大缓存空间 MAX_ENTRIES 为 3；
+使用 LinkedHashMap 的构造函数将 accessOrder 设置为 true，开启 LRU 顺序；
+覆盖 removeEldestEntry() 方法实现，在节点多于 MAX_ENTRIES 就会将最近最久未使用的数据移除。
+
+```java
+class LRUCache<K, V> extends LinkedHashMap<K, V> {
+    private static final int MAX_ENTRIES = 3;
+
+    protected boolean removeEldestEntry(Map.Entry eldest) {
+        return size() > MAX_ENTRIES;
+    }
+
+    LRUCache() {
+        super(MAX_ENTRIES, 0.75f, true);
+    }
+}
+
+public static void main(String[] args) {
+    LRUCache<Integer, String> cache = new LRUCache<>();
+    cache.put(1, "a");
+    cache.put(2, "b");
+    cache.put(3, "c");
+    cache.get(1);
+    cache.put(4, "d");
+    System.out.println(cache.keySet());
+}
+
+output:[3,1,4]
+```
 
 
+<h3>实现</h3>
+
+在获取 “短视频信息” 的代码中，首先从 Redis 中获取，如果获取失败就从数据库中获取。
+
+其中 VideoCacheDao 实现了缓存的获取和添加功能，CacheHitDao 用来记录缓存的命中次数和未命中次数，这是为了对系统进行监控，从而对缓存进行优化，并且能够及时发现【缓存穿透和缓存雪崩】等问题。
+
+在添加 “短视频” 信息到数据库的同时也要将它添加到 Redis 中，这是因为数据库使用的是主从架构来实现的读写分离，主从同步过程需要一定的时间，这一段时间 Master-slave 数据库是不一致的。如果其他用户的读请求发送到slave(从)数据库，那么就无法读取到最新的数据。如果在写的同时将数据添加到缓存中，那么读最新数据的请求就不会发送到从服务器，从而避免了主备服务器在同步期间的不一致。
+
+```java
+@Override
+public Video getVideoByVideoId(int VideoId)
+{
+    Video video = videoCacheDao.getVideo(vidoeId);
+    if (video != null) {
+        cacheHitDao.hit();           /* 缓存命中 */
+    } else {
+        video = videoMapper.selectByPrimaryKey(VideoId);
+        cacheHitDao.miss();          /* 缓存未命中 */
+        videoCacheDao.addVideo(blog);  /* 放入缓存 */
+    }
+    return blog;
+}
+
+@Override
+public void adVideo(int userId, Video video)
+{
+    Video video = new Video();
+    video.setUserid(userId);
+    video.setAudioid(audioId);
+    video.setVideoDesc(videoDesc);
+    video.setVideoPath(videoPath);
+    video.setCoverPath(coverPath);
+    videoMapper.insert(video);
+    videoCacheDao.addVideo(video);
+}
+```
+
+
+<h2>MySQL主从架构</h2>
+
+<h3>主从复制</h3>
+
+![](.img/5.png)
+
+MySQL 主从复制主要涉及三个线程：binlog 线程、I/O 线程和 SQL 线程。
+
+-   **binlog 线程**  ：负责将主服务器上的数据更改写入二进制文件（binlog）中。
+-   **I/O 线程**  ：负责从主服务器上读取二进制日志文件，并写入中继日志中。
+-   **SQL 线程**  ：负责读取中继日志并重放其中的 SQL 语句。
+
+<h3>读写分离</h3>
+
+![](./img/6.png)
+
+主服务器用来处理写操作以及最新的读请求，而从服务器用来处理读操作。
+
+读写分离常用代理方式来实现，代理服务器接收应用层传来的读写请求，然后决定转发到哪个服务器。另外一种MySQL Cluster的集群配置详见个人博客：[MySQL Cluster](https://blog.jiekk.top/2019/01/06/mysql-cluster/)
+
+MySQL 读写分离能提高性能的原因在于：
+
+- 主从服务器负责各自的读和写，极大程度缓解了锁的争用；
+- 从服务器可以配置 MyISAM 引擎，提升查询性能以及节约系统开销；
+- 增加冗余，提高可用性。
+
+<h3>主从复制配置</h3>
+
+<h4>创建复制账号</h4>
+
+在主从服务器都创建用于复制的账号，并且账号必须在 master-host 和 slaver-host 都进行授权，也就是说以下的命令需要在主从服务器上都执行一次。
+
+```
+mysql > grant all privileges on *.* to repl@'master-host' identified by 'password';
+mysql > grant all privileges on *.* to repl@'slave-host' identified by 'password';
+mysql > flush privileges;
+```
+
+完成后最好测试一下主从服务器是否能连通。
+
+```
+mysql -u repl -h host -p
+```
+
+
+<h3>配置 my.cnf 文件</h3>
+
+Master-主服务器
+
+```
+[root]# vi /etc/my.cnf
+
+[mysqld]
+log-bin  = mysql-bin
+server-id = 10
+```
+
+Slaver-从服务器
+
+```
+[root]# vi /etc/my.cnf
+
+[mysqld]
+log-bin          = mysql-bin
+server-id        = 11
+relay-log        = /var/lib/mysql/mysql-relay-bin
+log-slave-updates = 1
+read-only         = 1
+```
+
+重启 MySQL
+
+```
+[root]# service mysqld restart;
+```
+
+<h3>启动复制</h3>
+
+先查看主服务器的二进制文件名：
+
+```
+mysql > show master status;
+```
+
+```
++------------------+----------+--------------+------------------+
+| File            | Position | Binlog_Do_DB | Binlog_Ignore_DB |
++------------------+----------+--------------+------------------+
+| mysql-bin.000002 |      106 |              |                  |
++------------------+----------+--------------+------------------+
+```
+
+然后配置从服务器：
+
+```
+mysql > change master to master_host='master-host',            > master_user='repl',
+      > master_password='password',
+      > master_log_file='mysql-bin.000002',
+      > master_log_pos=0;
+```
+
+在从服务器上启动复制：
+
+```
+mysql > start slave
+```
+
+查看复制状态，Slave_IO_Running 和 Slave_SQL_Running 必须都为 Yes 才表示成功。
+
+```
+mysql > show slave status\G;
+*************************** 1. row ***************************
+              Slave_IO_State: Waiting for master to send event
+                  Master_Host:
+                  Master_User: repl
+                  Master_Port: 3306
+                Connect_Retry: 60
+              Master_Log_File: mysql-bin.000002
+          Read_Master_Log_Pos: 106
+              Relay_Log_File: mysql-relay-bin.000006
+                Relay_Log_Pos: 251
+        Relay_Master_Log_File: mysql-bin.000002
+            Slave_IO_Running: Yes
+            Slave_SQL_Running: Yes
+            ...
+```
+
+
+<h2>🔎技术栈</h2>
 <table>
 <thead>
 <tr>
@@ -88,6 +368,14 @@
 </tr>
 </thead>
 <tbody>
+
+
+<tr>
+<td>Weixin</td>
+<td>微信小程序</td>
+<td><a href="https://developers.weixin.qq.com/miniprogram/dev/framework/" rel="nofollow">https://developers.weixin.qq.com/miniprogram/dev/framework/</a></td>
+</tr>
+
 <tr>
 <td>Spring Framework</td>
 <td>容器</td>
@@ -183,52 +471,23 @@
 <td><a href="https://www.mysql.com/" rel="nofollow">https://www.mysql.com/</a></td>
 </tr>
 <tr>
+
+<tr>
+<td>Git</td>
+<td>版本控制</td>
+<td><a href="https://git-scm.com/" rel="nofollow">https://git-scm.com/</a></td>
+</tr>
+
+<tr>
 <td>Tomcat 7.0</td>
 <td>服务器</td>
 <td><a href="http://tomcat.apache.org/" rel="nofollow">http://tomcat.apache.org/</a></td>
 </tr>
 </tbody>
 </table>
-</br>
-<h3>前端</h3>
-<table>
-<thead>
-<tr>
-<th>名称</th>
-<th>描述</th>
-<th>官网</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>jQuery</td>
-<td>函数库</td>
-<td><a href="http://jquery.com/" rel="nofollow">http://jquery.com/</a></td>
-</tr>
-<tr>
-<td>Bootstrap</td>
-<td>前端框架</td>
-<td><a href="http://getbootstrap.com/" rel="nofollow">http://getbootstrap.com/</a></td>
-</tr>
-<tr>
-<td>Bootstrap-table</td>
-<td>数据表格</td>
-<td><a href="http://bootstrap-table.wenzhixin.net.cn/" rel="nofollow">http://bootstrap-table.wenzhixin.net.cn/</a></td>
-</tr>
-<tr>
-<td>echarts</td>
-<td>图表</td>
-<td><a href="http://echarts.baidu.com/" rel="nofollow">http://echarts.baidu.com/</a></td>
-</tr>
-<tr>
-<td>jqGrid</td>
-<td>前端分页组件</td>
-<td><a href="http://www.trirand.com/blog/jqgrid/jqgrid.html" rel="nofollow">http://www.trirand.com/blog/jqgrid/jqgrid.html</a></td>
-</tr>
-<tr>
-</tbody>
-</table>
-</br>
+
+
+
 
 <h2>🔥写在最后的话</h2>
 ✌✌✌✌✌✌✌学习的过程是"痛并快乐着"~~~~~✌✌✌✌✌✌✌✌✌✌
